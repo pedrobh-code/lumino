@@ -37,4 +37,15 @@ app.post('/subscribe', (req, res) => {
   }
 });
 
+app.get('/admin/emails', (req, res) => {
+  const auth = req.headers.authorization || '';
+  const password = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  if (password !== process.env.ADMIN_PASSWORD) {
+    res.setHeader('WWW-Authenticate', 'Bearer realm="Lumino Admin"');
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const rows = db.prepare('SELECT email, created_at FROM signups ORDER BY created_at DESC').all();
+  res.json({ count: rows.length, signups: rows });
+});
+
 app.listen(3000, () => console.log('Lumino running on :3000'));
