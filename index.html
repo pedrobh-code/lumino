@@ -113,9 +113,7 @@
       animation: fadeUp 0.9s ease 0.6s forwards;
     }
 
-    .headline-wrap {
-      position: relative;
-    }
+    .headline-wrap { position: relative; }
 
     .headline {
       font-family: 'Cormorant Garamond', serif;
@@ -165,6 +163,68 @@
       box-shadow: 0 0 6px 1px rgba(91,156,246,0.8);
     }
 
+    .signup-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.7rem;
+      opacity: 0;
+      animation: fadeUp 0.9s ease 1.45s forwards;
+    }
+
+    .signup-form {
+      display: flex;
+      align-items: center;
+      border: 1px solid rgba(91,156,246,0.25);
+      border-radius: 100px;
+      overflow: hidden;
+      background: rgba(91,156,246,0.03);
+    }
+
+    .signup-form input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--white);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      padding: 0.65rem 1.4rem;
+      width: 220px;
+    }
+
+    .signup-form input::placeholder { color: var(--muted); }
+
+    .signup-form button {
+      background: rgba(91,156,246,0.12);
+      border: none;
+      border-left: 1px solid rgba(91,156,246,0.2);
+      color: var(--glow);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 0.65rem 1.2rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+
+    .signup-form button:hover { background: rgba(91,156,246,0.24); }
+
+    .signup-msg {
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      min-height: 1em;
+      opacity: 0;
+      transition: opacity 0.35s;
+    }
+
+    .signup-msg.visible { opacity: 1; }
+    .signup-msg.ok  { color: var(--glow); }
+    .signup-msg.err { color: #f07060; }
+
     .sub {
       font-family: 'Cormorant Garamond', serif;
       font-style: italic;
@@ -174,7 +234,7 @@
       max-width: 38ch;
       line-height: 1.6;
       opacity: 0;
-      animation: fadeUp 0.9s ease 1.45s forwards;
+      animation: fadeUp 0.9s ease 1.65s forwards;
     }
 
     footer {
@@ -182,17 +242,10 @@
       align-items: center;
       justify-content: space-between;
       opacity: 0;
-      animation: fadeUp 0.8s ease 1.7s forwards;
+      animation: fadeUp 0.8s ease 1.85s forwards;
     }
 
-    .footer-left {
-      font-size: 0.65rem;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--muted);
-    }
-
-    .footer-right {
+    .footer-left, .footer-right {
       font-size: 0.65rem;
       letter-spacing: 0.18em;
       text-transform: uppercase;
@@ -212,9 +265,7 @@
       to   { opacity: 1; transform: translateY(0); }
     }
 
-    @keyframes fadeIn {
-      to { opacity: 1; }
-    }
+    @keyframes fadeIn { to { opacity: 1; } }
 
     @keyframes pulse {
       0%, 100% { box-shadow: 0 0 10px 3px rgba(91,156,246,0.7); }
@@ -246,6 +297,13 @@
       Coming Soon
       <div class="coming-soon-bar"></div>
     </div>
+    <div class="signup-wrap">
+      <div class="signup-form" id="signup-form">
+        <input type="email" placeholder="your@email.com" id="signup-input" />
+        <button id="signup-btn">Notify me</button>
+      </div>
+      <span class="signup-msg" id="signup-msg"></span>
+    </div>
     <p class="sub">We're building autonomous AI systems that reason, adapt, and work — so your teams don't have to wait.</p>
   </div>
 
@@ -261,22 +319,16 @@
 <script>
   const canvas = document.getElementById('c');
   const ctx = canvas.getContext('2d');
-
   let W, H, particles;
 
-  function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
 
   function makeParticle() {
     const isgold = Math.random() < 0.2;
     return {
-      x: Math.random() * W,
-      y: Math.random() * H,
+      x: Math.random() * W, y: Math.random() * H,
       r: Math.random() * 1.4 + 0.3,
-      vx: (Math.random() - 0.5) * 0.12,
-      vy: (Math.random() - 0.5) * 0.12,
+      vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
       alpha: Math.random() * 0.5 + 0.1,
       color: isgold ? '201,169,110' : '91,156,246',
       pulse: Math.random() * Math.PI * 2,
@@ -284,18 +336,13 @@
     };
   }
 
-  function init() {
-    resize();
-    particles = Array.from({ length: 130 }, makeParticle);
-  }
+  function init() { resize(); particles = Array.from({ length: 130 }, makeParticle); }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
-
     for (const p of particles) {
       p.pulse += p.pulseSpeed;
       const a = p.alpha * (0.7 + 0.3 * Math.sin(p.pulse));
-
       ctx.beginPath();
       const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r * 5);
       g.addColorStop(0, `rgba(${p.color},${a})`);
@@ -303,22 +350,49 @@
       ctx.fillStyle = g;
       ctx.arc(p.x, p.y, p.r * 5, 0, Math.PI * 2);
       ctx.fill();
-
-      p.x += p.vx;
-      p.y += p.vy;
-
-      if (p.x < -20) p.x = W + 20;
-      if (p.x > W + 20) p.x = -20;
-      if (p.y < -20) p.y = H + 20;
-      if (p.y > H + 20) p.y = -20;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20;
+      if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
     }
-
     requestAnimationFrame(draw);
   }
 
-  window.addEventListener('resize', () => { resize(); });
-  init();
-  draw();
+  window.addEventListener('resize', resize);
+  init(); draw();
+
+  // Email signup
+  const btn = document.getElementById('signup-btn');
+  const input = document.getElementById('signup-input');
+  const msg = document.getElementById('signup-msg');
+
+  btn.addEventListener('click', async () => {
+    const email = input.value.trim();
+    if (!email) return;
+    btn.disabled = true;
+    try {
+      const res = await fetch('/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        msg.textContent = "You're on the list";
+        msg.className = 'signup-msg ok visible';
+        input.value = '';
+      } else {
+        msg.textContent = data.error || 'Something went wrong';
+        msg.className = 'signup-msg err visible';
+        btn.disabled = false;
+      }
+    } catch {
+      msg.textContent = 'Something went wrong';
+      msg.className = 'signup-msg err visible';
+      btn.disabled = false;
+    }
+  });
+
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') btn.click(); });
 </script>
 </body>
 </html>
