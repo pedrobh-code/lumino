@@ -30,7 +30,7 @@ app.post('/subscribe', (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.json({ ok: true }); // already signed up, just be graceful
+      res.json({ ok: true });
     } else {
       res.status(500).json({ error: 'Server error' });
     }
@@ -38,10 +38,9 @@ app.post('/subscribe', (req, res) => {
 });
 
 app.get('/admin/emails', (req, res) => {
-  const auth = req.headers.authorization || '';
-  const password = auth.startsWith('Bearer ') ? auth.slice(7) : '';
+  const bearer = (req.headers.authorization || '').replace('Bearer ', '');
+  const password = req.query.password || bearer;
   if (password !== process.env.ADMIN_PASSWORD) {
-    res.setHeader('WWW-Authenticate', 'Bearer realm="Lumino Admin"');
     return res.status(401).json({ error: 'Unauthorized' });
   }
   const rows = db.prepare('SELECT email, created_at FROM signups ORDER BY created_at DESC').all();
