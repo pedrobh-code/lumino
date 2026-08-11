@@ -1,49 +1,68 @@
 import express from 'express';
-import Database from 'better-sqlite3';
+import pg from 'pg';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import fs from 'fs';
 
+const { Pool } = pg;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DATA_DIR = '/app/data';
 
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-const db = new Database(path.join(DATA_DIR, 'emails.db'));
-db.exec(`CREATE TABLE IF NOT EXISTS signups (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
-  created_at TEXT DEFAULT (datetime('now'))
-)`);
+const pool = new Pool({
+  connectionString: process.env.OLAIA_DATABASE_URL,
+});
 
 const app = express();
 app.use(express.json());
 app.use(express.static(__dirname));
 
-app.post('/subscribe', (req, res) => {
+app.post('/subscribe', async (req, res) => {
   const { email } = req.body;
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Invalid email' });
   }
+  const normalized = email.trim().toLowerCase();
+
+  let isNewSignup;
   try {
-    db.prepare('INSERT INTO signups (email) VALUES (?)').run(email.trim().toLowerCase());
-    res.json({ ok: true });
+    const result = await pool.query(
+      'INSERT INTO signups (email) VALUES ($1) ON CONFLICT (email) DO NOTHING RETURNING id',
+      [normalized]
+    );
+    isNewSignup = result.rowCount > 0;
   } catch (e) {
-    if (e.code === 'SQLITE_CONSTRAINT_UNIQUE') {
-      res.json({ ok: true });
-    } else {
-      res.status(500).json({ error: 'Server error' });
+    console.error('signup insert failed', e);
+    return res.status(500).json({ error: 'Server error' });
+  }
+
+  if (isNewSignup) {
+    try {
+      await fetch(process.env.OLAIA_EMAIL_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OLAIA_EMAIL_TOKEN}`,
+        },
+        body: JSON.stringify({
+          template_slug: 'signup-welcome',
+          to: normalized,
+          variables: {},
+          idempotency_key: `signup-welcome-${normalized}`,
+        }),
+      });
+    } catch (e) {
+      console.error('welcome email failed', e);
     }
   }
+
+  res.json({ ok: true });
 });
 
-app.get('/admin/emails', (req, res) => {
+app.get('/admin/emails', async (req, res) => {
   const bearer = (req.headers.authorization || '').replace('Bearer ', '');
   const password = req.query.password || bearer;
   if (password !== process.env.ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
-  const rows = db.prepare('SELECT email, created_at FROM signups ORDER BY created_at DESC').all();
+  const { rows } = await pool.query('SELECT email, created_at FROM signups ORDER BY created_at DESC');
   res.json({ count: rows.length, signups: rows });
 });
 
